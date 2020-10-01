@@ -92,6 +92,20 @@ router.delete('/:id', (req, res) => {
 
 router.put('/:id', (req, res) => {
   // do your magic!
+  Users.update(req.params.id, req.body)
+  .then(count => {
+    if (count > 0) {
+      res.status(200).json({ message: "the user been updated"})
+    } else {
+      res.status(404).json({message: "the user couldn't be updated"})
+    }
+  })
+  .catch(error => {
+    console.log(error)
+    res.status(500).json({
+      message: "error updating user"
+    })
+  })
 });
 
 //custom middleware
