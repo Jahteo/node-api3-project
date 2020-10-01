@@ -6,7 +6,7 @@ const Posts = require("../posts/postDb");
 
 const router = express.Router();
 
-router.post('/', (req, res) => {
+router.post('/', validateUser, (req, res) => {
   // do your magic!
   Users.insert(req.body)
     .then(user => {
@@ -20,12 +20,11 @@ router.post('/', (req, res) => {
     })
 });
 
-router.post('/:id/posts', (req, res) => {
+router.post('/:id/posts', validateUserId, validatePost, (req, res) => {
   // do your magic!
-  const id = req.params.id;
-  req.body.user_id = id;
-  //eventually just:
-  //req.body.user_id = req.params.id
+  req.body.user_id = req.params.id;
+  // console.log(req.user)
+  // console.log(req.body)
   Posts.insert(req.body)
   .then(post => {
     res.status(201).json(post)
@@ -52,16 +51,18 @@ router.get('/', (req, res) => {
     })
 });
 
-router.get('/:id', (req, res) => {
+router.get('/:id', validateUserId, (req, res) => {
   // do your magic!
-  Users.getById(req.params.id)
-    .then( user => {
-      user ? res.status(200).json(user)
-      : res.status(404).json({ message: "User not found" })
-    })
+  res.status(200).json(req.user)
+  //with validation baked in:
+  // Users.getById(req.params.id)
+  //   .then( user => {
+  //     user ? res.status(200).json(user)
+  //     : res.status(404).json({ message: "User not found" })
+  //   })
 });
 
-router.get('/:id/posts', (req, res) => {
+router.get('/:id/posts', validateUserId, (req, res) => {
   // do your magic!
   Users.getUserPosts(req.params.id)
     .then(posts => {
@@ -90,7 +91,7 @@ router.delete('/:id', (req, res) => {
     })
 });
 
-router.put('/:id', (req, res) => {
+router.put('/:id', validateUserId, (req, res) => {
   // do your magic!
   Users.update(req.params.id, req.body)
   .then(count => {
@@ -112,14 +113,42 @@ router.put('/:id', (req, res) => {
 
 function validateUserId(req, res, next) {
   // do your magic!
+  Users.getById(req.params.id)
+    .then( user => {
+      if(user) {
+        req.user = user;
+        next();
+      } else {
+        res.status(404).json({ message: "User not found (Stopped by validateUserId)" });
+      }
+    })
+    .catch(error => {
+      res.status(400).json({ message: "invalid user id (Stopped by validateUserId)" })
+    });
 }
 
 function validateUser(req, res, next) {
   // do your magic!
+  console.log(req.body)
+  if (req.body) {
+    req.body.name ? next()
+    : res.status(400).json({ message: "missing required name field" })
+  } else {
+    //###Q: in practice I can't get hit this error, even when setting postman to no body. Why?
+    res.status(400).json({ message: "missing user data" })
+  }
 }
 
 function validatePost(req, res, next) {
   // do your magic!
+  console.log(req.body)
+  if (req.body) {
+    req.body.text ? next()
+    : res.status(400).json({ message: "missing required text field" })
+  } else {
+    //###Q: in practice I can't get hit this error, even when setting postman to no body. Why?
+    res.status(400).json({ message: "missing user data" })
+  }
 }
 
 module.exports = router;
